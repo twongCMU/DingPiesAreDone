@@ -1,0 +1,13 @@
+274  pip install RPi.GPIO
+  275  python
+  276  source venv/bin/activate
+  277  python gesture.py 
+  278  pip install smbus
+
+pip install rainbowhat
+pip install gevent
+
+pip3 install sparkfun-qwiic-vl53l1x
+
+for spark
+make sure setuptools is installed
