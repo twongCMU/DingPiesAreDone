@@ -19,7 +19,7 @@ pip install smbus
 pip install rainbowhat
 pip install gevent
 pip install sparkfun-qwiic-vl53l1x
-
+pip install apds9960
 
 
 if i2c is not set up correctly you will get this:
