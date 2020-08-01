@@ -16,7 +16,7 @@ Note: I didn't try very hard with the code. It was fun to write but it isn't wel
 * https://www.sparkfun.com/products/15081 (wires to connect Pi to distance sensor)
 
 ## Setting up hardware
-various wires - I soldered wires to the gensture sensor and connected them to the Pi. The gesture sensor has an interrupt pin but I couldn't figure out where to connect it to the Pi or what to do with it. The code seems to work fine without using it.
+various wires - I soldered wires to the gensture sensor and connected them to the Pi. The gesture sensor has an interrupt pin but the Rainbow Hat doesn't reroute that pin so I didn't connect it. The code seems to work without it. The code seems to work fine without using it.
 
 When I connected the Rainbow Hat to the GPIO pins there is a gap which is enough to put the Shim in there to connect to the distance sensor. However the gap is too wide to get a good connection so I forced a little bit of folded paper in the gap to put pressure on the shim. It's hacky.
 
