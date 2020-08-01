@@ -1,5 +1,6 @@
 # DingPiesAreDone
-A gesture-based kitchen timer for the Rasperry Pi
+A gesture-based kitchen timer for the Rasperry Pi. As it operates by hand gestures it can be used with dirty hands or while wearing oven mitts. It can be programmed to prioritize the ways that I most frequently use a timer. Finally it lets me avoid the annoying quirks of the timers that come with the oven or microwave like bottons that don't respond or the oven timer that jumps 10 minutes at a time when I press the button too quickly.
+
 ![Image of the kitchen timer](images/timer.jpg)
 
 # Hardware
