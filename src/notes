@@ -20,7 +20,8 @@ pip install rainbowhat
 pip install gevent
 pip install sparkfun-qwiic-vl53l1x
 pip install apds9960
-pip install sparkfun-qwiic
+pip install sparkfun-qwiic  <-- 7/31/2020 404 error see https://github.com/sparkfun/Qwiic_Py/issues/5 I ended up cloning the git repo, deleting the affected dir, then doing an install
+pip install gevent
 
 if i2c is not set up correctly you will get this:
 
