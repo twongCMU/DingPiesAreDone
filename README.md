@@ -58,7 +58,7 @@ Up to 3 concurrent timers can be set. LEDs indicate how many are active and the 
 * wave hand down->up = cancel current timer
 * wave hand right->left = nothing set
 
-### This one is a basic timer that uses the Rainbow Hat buttons
+### A basic timer that uses the Rainbow Hat buttons:
 Can be used to diagnose problems since it uses the Rainbow Hat but not the other sensors
 
 source venv/bin/activate
