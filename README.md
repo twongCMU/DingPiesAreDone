@@ -3,6 +3,8 @@ A gesture-based kitchen timer for the Rasperry Pi. As it operates by hand gestur
 
 In the picture below the distance sensor used to set the timer can be seen above the Pi. I place my hand between 6" and 3' from it to set the time in minutes from 1-15 depending on ambient conditions. Out of view at a 90 degree angle to the right is a gesture sensor that is used to activate the timer, set a quick 1 minute timer, or cancel a timer.
 
+Note: I didn't try very hard with the code. It was fun to write but it isn't well written or tested.
+
 ![Image of the kitchen timer](images/timer.jpg)
 
 # Hardware
