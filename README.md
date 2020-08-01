@@ -80,5 +80,5 @@ FileNotFoundError: [Errno 2] No such file or directory
 Wiring:
 * black = gnd
 * yellow = scl
-* green = sdu
+* green = sda
 * red non-interrupt= 3v3
