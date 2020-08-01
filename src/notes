@@ -1,13 +1,34 @@
-274  pip install RPi.GPIO
-  275  python
-  276  source venv/bin/activate
-  277  python gesture.py 
-  278  pip install smbus
+in /boot/config.txt add
+dtoverlay=pi3-disable-bt  <--if want to disable bluetooth
+dtparam=i2c_arm=on,i2c_baudrate=400000  <-- for smbus on rainbowhat
 
+uncomment 
+dtparam=spi=on
+
+sudo raspi-config
+enable spi and i2c in interfacing options
+
+
+apt-get install python3-venv python3-setuptools screen pimoroni python3-rainbowhat python-rpi.gpio python3-rpi.gpio
+
+python3 -m venv venv
+source venv/bin/activate
+
+pip install RPi.GPIO
+pip install smbus
 pip install rainbowhat
 pip install gevent
+pip install sparkfun-qwiic-vl53l1x
 
-pip3 install sparkfun-qwiic-vl53l1x
 
-for spark
-make sure setuptools is installed
+
+if i2c is not set up correctly you will get this:
+
+(venv) pi@pizero:~/git/DingPiesAreDone/src $ python dingtimer.py 
+Traceback (most recent call last):
+  File "dingtimer.py", line 4, in <module>
+    import rainbowhat as rh
+  File "/home/pi/venv/lib/python3.7/site-packages/rainbowhat/__init__.py", line 31, in <module>
+    bus = smbus.SMBus(1)
+FileNotFoundError: [Errno 2] No such file or directory
+
