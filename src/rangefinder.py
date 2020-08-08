@@ -3,11 +3,18 @@ import gevent
 import rainbowhat as rh
 import qwiic
 
+# The driver has a function call start_temperature_update which might be useful if we're cooking and the sensor warms up
+
 class RangeFinder:
     def __init__(self):
         self._tof = qwiic.QwiicVL53L1X()
         if self._tof.sensor_init() is None:
             print("Sensor online!\n")
+
+        # set it to short range mode so it returns data faster
+        # but is limited to 1.3 meters which is enough for kitchen use
+        self._tof.set_distance_mode(1)
+
 
     def get_time(self) -> int:
 
@@ -45,7 +52,7 @@ class RangeFinder:
                 rh.display.show()
                 if ret_minutes == minutes:
                     ret_consecutive += 1
-                    if ret_consecutive > 15:
+                    if ret_consecutive > 10:
                         break
                 else:
                     ret_minutes = minutes

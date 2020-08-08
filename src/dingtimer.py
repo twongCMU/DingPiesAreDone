@@ -31,7 +31,9 @@ class DingTimer:
             return
 
         print("Using timer " + str(ret))
-        
+        # make a noise just to have an auditory indication
+        rh.buzzer.midi_note(80, .2)
+
         # spawn a timer async so that we can spawn new timers while that is running
         event = gevent.spawn(self._one_timer, seconds, self._current_timer)
 
@@ -192,10 +194,10 @@ class DingTimer:
                 time_left = math.ceil(end_time - cur_time)
                 self._print_timer(time_left)
 
-                if time_left < 60 and not warning_sent:
-                    rh.buzzer.midi_note(60, 2)
+                if time_left <= 60 and not warning_sent:
+                    rh.buzzer.midi_note(60, 1)
                     gevent.sleep(.5)
-                    rh.buzzer.midi_note(60, 2)
+                    rh.buzzer.midi_note(60, 1)
                     warning_sent = True
             gevent.sleep(.5)
             cur_time = time.time()

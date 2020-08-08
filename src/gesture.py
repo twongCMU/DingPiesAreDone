@@ -4,12 +4,11 @@ from apds9960.const import *
 from apds9960 import APDS9960
 import RPi.GPIO as GPIO
 import smbus
-from time import sleep
+
 from rangefinder import RangeFinder
 
 from dingtimer import DingTimer as dt
 import gevent
-from gevent.fileobject import FileObject
 
 port = 1
 bus = smbus.SMBus(port)
@@ -28,7 +27,7 @@ dirs = {
 }
 
 try:
-    apds.enableGestureSensor()
+    apds.enableGestureSensor(interrupts=False)
     while True:
         gevent.sleep(0.5)
         if apds.isGestureAvailable():
