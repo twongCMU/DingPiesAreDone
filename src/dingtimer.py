@@ -142,7 +142,17 @@ class DingTimer:
         print("unmuting " + str(id))
         (ignore, end_time, event) = self._timer_list[id]
         self._timer_list[id] = (False, end_time, event)
-        
+
+    def active_timer_count(self):
+        count = 0
+
+        for i in range(3):
+            (muted, end_time, event) = self._timer_list[i]
+            if end_time > cur_time and end_time < closest_time:
+                count += 1
+
+        return count
+                
     def show_closest_timer(self):
         closest_id = TIMER_BOGUS_ID
         closest_time = sys.maxsize

@@ -47,7 +47,7 @@ class RangeFinder:
                 minutes = int(round((distance_feet - .5) * 4))
 
 		# the lowest value is 1 minute but we already have a gesture for that
-		minutes += 1
+                minutes += 1
 
                 if minutes < 10:
                     rh.display.print_str("000" + str(minutes))
