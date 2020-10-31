@@ -5,7 +5,7 @@ In the picture below the distance sensor used to set the timer can be seen above
 
 Note: I didn't try very hard with the code. It was fun to write but it isn't well written or tested.
 
-![Image of the kitchen timer](images/timer.jpg)
+![Image of the kitchen timer](images/timer.gif)
 
 # Hardware
 * https://www.raspberrypi.org/products/raspberry-pi-zero-w/
