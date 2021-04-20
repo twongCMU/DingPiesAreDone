@@ -29,11 +29,22 @@ dirs = {
 try:
     apds.enableGestureSensor(interrupts=False)
     while True:
-        gevent.sleep(0.5)
+        gevent.sleep(0.2)
         if apds.isGestureAvailable():
             motion = apds.readGesture()
+
+            # Note: the sensor is mounted upside-down in my device so these are all reversed
             if motion == APDS9960_DIR_LEFT:
-                mytimer.start_timer(60)
+                # Add one minute if there is a timer, start a 1 minute timer if not
+                if mytimer.active_timer_count() == 0:
+                    mytimer.start_timer(60)
+                else:
+                    mytimer.add_time(60)
+            elif motion == APDS9960_DIR_RIGHT:
+                # Subtract one minute if there is an active timer
+                if mytimer.active_timer_count() > 0:
+                    mytimer.subtract_time(60)
+                    
             elif motion == APDS9960_DIR_UP:
                 mytimer.cancel_timer()
             elif motion == APDS9960_DIR_DOWN:

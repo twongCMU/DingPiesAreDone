@@ -34,8 +34,11 @@ class DingTimer:
         # make a noise just to have an auditory indication
         rh.buzzer.midi_note(80, .2)
 
+        # partially update accounting so the gevent has it
+        self._timer_list[self._current_timer] = (False, time.time() + seconds, None)
+        
         # spawn a timer async so that we can spawn new timers while that is running
-        event = gevent.spawn(self._one_timer, seconds, self._current_timer)
+        event = gevent.spawn(self._one_timer,self._current_timer)
 
         # update accounting then display timer LED
         self._timer_list[self._current_timer] = (False, time.time() + seconds, event)
@@ -49,6 +52,26 @@ class DingTimer:
         # resume showing the timer that is closest to finishing
         # (which might not be this timer)
         self.show_closest_timer()
+
+    def add_time(self, amount):
+        # There might be a race here if a timer ends just as we add time to it
+        (muted, end_time, event) = self._timer_list[self._current_timer]
+        end_time += amount
+        self._timer_list[self._current_timer] = (muted, end_time, event)
+
+        # This might make this timer longer than another one where we should call show_closest_timer
+        # except then we can't continue to add time to this current timer so we don't do that.
+        # It is rare that I use multiple timers and even more rare that I would add enough time
+        # in this way to make them conflict so I'll just let this case occur rather than trying
+        # to solve it
+        
+    def subtract_time(self, amount):
+        # There might be a race here if a timer ends just as we subtract time from it
+        (muted, end_time, event) = self._timer_list[self._current_timer]
+        end_time -= amount
+        self._timer_list[self._current_timer] = (muted, end_time, event)
+
+        # see big comment in add_time
 
     def timer_right(self):
         """Switch to the timer to the right of the current one, if possible
@@ -125,6 +148,10 @@ class DingTimer:
     def _clear_timer(self, id: int):
         self._timer_list[id] = (False, 0, None)
 
+    def _get_timer_end_time(self, id:int):
+        (ignore, endtime, event) = self._timer_list[id]
+        return endtime
+
     def _is_timer_muted(self, id: int):
         (muted, ignore, event) = self._timer_list[id]
         return muted
@@ -146,9 +173,10 @@ class DingTimer:
     def active_timer_count(self):
         count = 0
 
+        cur_time = time.time()
         for i in range(3):
             (muted, end_time, event) = self._timer_list[i]
-            if end_time > cur_time and end_time < closest_time:
+            if end_time > cur_time:
                 count += 1
 
         return count
@@ -193,15 +221,15 @@ class DingTimer:
             rh.display.print_str(m_print + s_print)
         rh.display.show()
             
-    def _one_timer(self, seconds: int, timer_id: int):
+    def _one_timer(self, timer_id: int):
         cur_time = time.time()
-        end_time = cur_time + seconds
+        
         warning_sent = False
-        if seconds < 60:
+        if self._get_timer_end_time(timer_id) - cur_time < 60:
             warning_sent = True
-        while cur_time < end_time:
+        while cur_time < self._get_timer_end_time(timer_id):
             if not self._is_timer_muted(timer_id):
-                time_left = math.ceil(end_time - cur_time)
+                time_left = math.ceil(self._get_timer_end_time(timer_id) - cur_time)
                 self._print_timer(time_left)
 
                 if time_left <= 60 and not warning_sent:
