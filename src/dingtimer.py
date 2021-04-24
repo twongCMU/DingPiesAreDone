@@ -58,7 +58,9 @@ class DingTimer:
         (muted, end_time, event) = self._timer_list[self._current_timer]
         end_time += amount
         self._timer_list[self._current_timer] = (muted, end_time, event)
-
+        rh.buzzer.midi_note(60, .2)
+        gevent.sleep(.2)
+        rh.buzzer.midi_note(100, .2)
         # This might make this timer longer than another one where we should call show_closest_timer
         # except then we can't continue to add time to this current timer so we don't do that.
         # It is rare that I use multiple timers and even more rare that I would add enough time
@@ -71,6 +73,9 @@ class DingTimer:
         end_time -= amount
         self._timer_list[self._current_timer] = (muted, end_time, event)
 
+        rh.buzzer.midi_note(100, .2)
+        gevent.sleep(.2)
+        rh.buzzer.midi_note(60, .2)
         # see big comment in add_time
 
     def timer_right(self):
