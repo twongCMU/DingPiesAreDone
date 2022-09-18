@@ -51,6 +51,7 @@ try:
                 mytimer.mute_all()
                 rf = RangeFinder()
                 minutes = rf.get_time()
+                print(f"Rangefinder returned {minutes}")
                 if minutes is not None:
                     mytimer.start_timer(minutes*60)
                 else:
