@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
 import time
-import rainbowhat as rh
+#import rainbowhat as rh
+from unicorn_mini import Unicorn
 import gevent
 import sys
 import math
@@ -20,19 +21,21 @@ class DingTimer:
         # start with left timer
         self._current_timer = 0 
 
+        self._unicorn = Unicorn()
+        
     def start_timer(self, seconds: int):
         ret = self.get_free_timer()
         
         # if there are no timers available, make a noise
         if ret is None:
-            rh.buzzer.midi_note(68, .5)
+            #rh.buzzer.midi_note(68, .5)
             gevent.sleep(.5)
-            rh.buzzer.midi_note(60, .5)
+            #rh.buzzer.midi_note(60, .5)
             return
 
         print("Using timer " + str(ret))
         # make a noise just to have an auditory indication
-        rh.buzzer.midi_note(80, .2)
+        #rh.buzzer.midi_note(80, .2)
 
         # partially update accounting so the gevent has it
         self._timer_list[self._current_timer] = (False, time.time() + seconds, None)
@@ -58,9 +61,9 @@ class DingTimer:
         (muted, end_time, event) = self._timer_list[self._current_timer]
         end_time += amount
         self._timer_list[self._current_timer] = (muted, end_time, event)
-        rh.buzzer.midi_note(60, .2)
+        #rh.buzzer.midi_note(60, .2)
         gevent.sleep(.2)
-        rh.buzzer.midi_note(100, .2)
+        #rh.buzzer.midi_note(100, .2)
         # This might make this timer longer than another one where we should call show_closest_timer
         # except then we can't continue to add time to this current timer so we don't do that.
         # It is rare that I use multiple timers and even more rare that I would add enough time
@@ -73,9 +76,9 @@ class DingTimer:
         end_time -= amount
         self._timer_list[self._current_timer] = (muted, end_time, event)
 
-        rh.buzzer.midi_note(100, .2)
+        #rh.buzzer.midi_note(100, .2)
         gevent.sleep(.2)
-        rh.buzzer.midi_note(60, .2)
+        #rh.buzzer.midi_note(60, .2)
         # see big comment in add_time
 
     def timer_right(self):
@@ -121,13 +124,15 @@ class DingTimer:
         return None
         
     def illuminate_timer(self):
+        return
+        """
         if self._current_timer == 0:
             rh.lights.rgb(1, 0, 0)
         if self._current_timer == 1:
             rh.lights.rgb(0, 1, 0)
         if self._current_timer == 2:
             rh.lights.rgb(0, 0, 1)
-      
+        """
 
     def _set_active_timer_rainbow(self):
         """ Light the LEDs for active timer
@@ -142,14 +147,15 @@ class DingTimer:
         the right pixel
         """
         t = time.time()
+        """
         for i in range(3):
-            (muted, end_time, event) = self._timer_list[i]
+            (muted, end_time, event) = self._timer_list[i]        
             if end_time > t:
                 rh.rainbow.set_pixel(6-(i*3), 50, 50, 50)
             else:
                 rh.rainbow.set_pixel(6-(i*3), 0, 0, 0)
         rh.rainbow.show()
-        
+        """
     def _clear_timer(self, id: int):
         self._timer_list[id] = (False, 0, None)
 
@@ -200,8 +206,7 @@ class DingTimer:
 
         if closest_id == TIMER_BOGUS_ID:
             print("No timer to show")
-            rh.display.clear()
-            rh.display.show()
+            self._unicorn.clear_screen()
             return
         
         for i in range(3):
@@ -218,14 +223,13 @@ class DingTimer:
         if s < 10:
             s_print = "0" + str(s)
         m_print = str(m)
-        if len(m_print) == 1:
-            m_print = " " + m_print
+
         if m == 0:
-            rh.display.print_str("  " + s_print)
+            self._unicorn.write_four(s_print)
         else:
-            rh.display.print_str(m_print + s_print)
-        rh.display.show()
-            
+            self._unicorn.write_four(m_print + s_print)
+
+
     def _one_timer(self, timer_id: int):
         cur_time = time.time()
         
@@ -238,15 +242,14 @@ class DingTimer:
                 self._print_timer(time_left)
 
                 if time_left <= 60 and not warning_sent:
-                    rh.buzzer.midi_note(60, 1)
+                    #rh.buzzer.midi_note(60, 1)
                     gevent.sleep(.5)
-                    rh.buzzer.midi_note(60, 1)
+                    #rh.buzzer.midi_note(60, 1)
                     warning_sent = True
             gevent.sleep(.5)
             cur_time = time.time()
 
-        rh.display.print_str("  00")
-        rh.display.show()
+        self._unicorn.write_four("00")
         
         # this timer is done. Show another timer if needed
         # while the alarm goes off
@@ -255,10 +258,10 @@ class DingTimer:
         # it's possible to light the rainbow here while another timer
         # is also doing so but I think we can blame the user it they set
         # multiple timers to end at the same time
-        rh.rainbow.set_all(255,255,255)
-        rh.rainbow.show()
-        rh.buzzer.midi_note(60, 5)
-        rh.buzzer.midi_note(68, 5)
+        #rh.rainbow.set_all(255,255,255)
+        #rh.rainbow.show()
+        #rh.buzzer.midi_note(60, 5)
+        #rh.buzzer.midi_note(68, 5)
         rgb_r = 255
         rgb_g = 255
         rgb_b = 0
@@ -267,14 +270,13 @@ class DingTimer:
             rgb_r = rgb_g
             rgb_g = rgb_b
             rgb_b = temp
-            rh.rainbow.set_all(rgb_r, rgb_g, rgb_b)
-            rh.rainbow.show()
+            #rh.rainbow.set_all(rgb_r, rgb_g, rgb_b)
+            #rh.rainbow.show()
             gevent.sleep(.1)
 
-        rh.rainbow.clear()
-        rh.rainbow.show()
-        rh.display.clear()
-        rh.display.show()
+        #rh.rainbow.clear()
+        #rh.rainbow.show()
+        self._unicorn.clear_screen()
 
         # we just lit the rainbow for the timer finishing so
         # reset the rainbow to show active timers

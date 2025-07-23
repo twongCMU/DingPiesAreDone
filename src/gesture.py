@@ -1,19 +1,29 @@
 #!/usr/bin/python3
 
-from apds9960.const import *
-from apds9960 import APDS9960
+from adafruit_apds9960.apds9960 import APDS9960
 import RPi.GPIO as GPIO
-import smbus
 
 from rangefinder import RangeFinder
 
 from dingtimer import DingTimer as dt
 import gevent
+import board
+
+APDS9960_DIR_NONE = 0
+APDS9960_DIR_UP = 1
+APDS9960_DIR_DOWN = 2
+APDS9960_DIR_LEFT = 3
+APDS9960_DIR_RIGHT = 4
+APDS9960_DIR_NEAR = 5
+APDS9960_DIR_FAR = 6
 
 port = 1
-bus = smbus.SMBus(port)
 
-apds = APDS9960(bus)
+i2c = board.I2C()
+apds = APDS9960(i2c)
+apds.enable_gesture = True
+apds.enable_proximity = True
+
 mytimer = dt()
 
 dirs = {
@@ -27,12 +37,12 @@ dirs = {
 }
 
 try:
-    apds.enableGestureSensor(interrupts=False)
+
     while True:
         gevent.sleep(0.2)
-        if apds.isGestureAvailable():
-            motion = apds.readGesture()
-
+        motion = apds.gesture()
+        print(f"got {motion}")
+        if motion != APDS9960_DIR_NONE:
             # Note: the sensor is mounted upside-down in my device so these are all reversed
             if motion == APDS9960_DIR_LEFT:
                 # Add one minute if there is a timer, start a 1 minute timer if not

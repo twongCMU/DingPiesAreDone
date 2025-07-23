@@ -1,6 +1,6 @@
 import time
 import gevent
-import rainbowhat as rh
+#import rainbowhat as rh
 import qwiic
 
 # The driver has a function call start_temperature_update which might be useful if we're cooking and the sensor warms up
@@ -17,7 +17,8 @@ class RangeFinder:
 
 
     def get_time(self) -> int:
-
+        return 5
+    """
         rh.display.print_str("  GO")
         rh.display.show()
         gevent.sleep(.20)
@@ -69,3 +70,4 @@ class RangeFinder:
                 print(e)
 
         return minutes
+    """
