@@ -22,6 +22,9 @@ class Knob:
         self._last_position = self._encoder.position
 
 
+    def is_button_pressed(self) -> bool:
+        return not self._button.value
+    
     def get_changed(self) -> int:
         """ Returns the number of encoder ticks that have changed since init or reinit
         Positive numbers = clockwise, negative = counterclockwise, 0 = unchanged

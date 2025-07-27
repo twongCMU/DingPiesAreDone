@@ -125,7 +125,11 @@ class Unicorn:
         for i in range(self._display_width):
             self._unicornhatmini.set_pixel(i, 6, 0,0,0)
         self._unicornhatmini.show()
-        
+
+    def clear_display(self):
+        self.clear_active_timers()
+        self.clear_numbers()
+
     def set_active_timers(self, timers):
         # In the first version I hardcoded 3 timers max and I'm too lazy to generalize it
         for (i, t) in enumerate(timers):

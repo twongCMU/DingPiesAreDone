@@ -41,6 +41,7 @@ class Thermo:
 
     def wait_for_target(self, target_temp):
         frame = [0]*768
+        threshold_met = False
         while True:
             try:
                 self._mlx.getFrame(frame)
@@ -65,13 +66,19 @@ class Thermo:
             print()
             print(f"Threshold_met {threshold_met} ready {ready}")
             if threshold_met and ready:
+                print("Threshold met")
+                threshold_met = True
+                break
+            if self._knob.is_button_pressed():
+                print("Button is pressed")
                 break
 
-            break
+        if threshold_met:
+            gevent.spawn(self._unicorn.show_rainbow, 5)
+            gevent.spawn(self._buzzer.play_timer_done)
 
-        print("OOOOO")
-        gevent.spawn(self._unicorn.show_rainbow, 5)
-        gevent.spawn(self._buzzer.play_timer_done)
+        self._unicorn.clear_display()
+
         print("DONEEEEE")
 
     def get_target_temp(self) -> int:
