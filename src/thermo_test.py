@@ -1,5 +1,5 @@
 from thermo import Thermo
-import time
+import gevent
 
 t = Thermo()
 
@@ -7,5 +7,5 @@ while(1):
     print("Starting")
     t.do_thermo()
 
-    time.sleep(.1)
+    gevent.sleep(.1)
     

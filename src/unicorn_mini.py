@@ -1,6 +1,7 @@
 import sys
 import time
-
+import math
+import gevent
 from colorsys import hsv_to_rgb
 
 from PIL import Image, ImageDraw, ImageFont
@@ -33,7 +34,10 @@ class Unicorn:
         self._font = ImageFont.truetype("5x7.ttf", 8)
 
         hue = .330
-        self._r, self._g, self._b = [int(c * 255) for c in hsv_to_rgb(hue, 1.0, 1.0)]
+        self._timer_r, self._timer_g, self._timer_b = [int(c * 255) for c in hsv_to_rgb(hue, 1.0, 1.0)]
+
+        hue = .530
+        self._active_r, self._active_g, self._active_b = [int(c * 255) for c in hsv_to_rgb(hue, 1.0, 1.0)]
         
     def write_four(self, text):
         """ Writes up to 4 digits. If there are a full 4, the leftmost must be a 1
@@ -43,7 +47,7 @@ class Unicorn:
         if int(text) == text:
             text = str(text)
 
-        self.clear_screen(show=False)
+        self.clear_numbers(show=False)
         index_start = 4 - len(text)
         for i in range(len(text)):
             self.write_one(text[i], index_start + i)
@@ -96,7 +100,7 @@ class Unicorn:
             for x in range(text_width):
                 if image.getpixel((x+image_x_offset, y)) == 255:
                     print("x",end="")
-                    self._unicornhatmini.set_pixel(x+display_x_offset, y+display_y_offset, self._r, self._g, self._b)
+                    self._unicornhatmini.set_pixel(x+display_x_offset, y+display_y_offset, self._timer_r, self._timer_g, self._timer_b)
                 else:
                     print(".",end="")
 
@@ -104,13 +108,58 @@ class Unicorn:
         print()
 
 
-    def clear_screen(self, show = True):
+    def clear_numbers(self, show = True):
         """ Clear the display. Pass show=False if the caller is going to do other display changes.
         The caller should call show() in that case"""
-        
-        for y in range(self._display_height):
+
+
+        # -1 on the vertical so we don't clear the active timer indicators
+        for y in range(self._display_height-1):
             for x in range(self._display_width):
                 self._unicornhatmini.set_pixel(x, y, 0, 0, 0)
 
         if show:
             self._unicornhatmini.show()
+
+    def clear_active_timers(self):
+        for i in range(self._display_width):
+            self._unicornhatmini.set_pixel(i, 6, 0,0,0)
+        self._unicornhatmini.show()
+        
+    def set_active_timers(self, timers):
+        # In the first version I hardcoded 3 timers max and I'm too lazy to generalize it
+        for (i, t) in enumerate(timers):
+            if t:
+                self._unicornhatmini.set_pixel(0+i*7, 6, self._active_r, self._active_g, self._active_b)
+                self._unicornhatmini.set_pixel(1+i*7, 6, self._active_r, self._active_g, self._active_b)
+            else:
+                self._unicornhatmini.set_pixel(0+i*7, 6, 0,0,0)
+                self._unicornhatmini.set_pixel(1+i*7, 6, 0,0,0)
+        self._unicornhatmini.show()
+
+    def show_rainbow(self, duration_seconds):
+        """We do this in a gevent thread so we can also play the buzzer sound"""
+        
+        # from the unicornhatmini examples
+        step = 0
+        
+        for i in range(duration_seconds*60):
+            step += 1
+
+            for x in range(0, self._display_width):
+                for y in range(0, self._display_height):
+                    dx = (math.sin(step / self._display_width + 20) * self._display_width) + self._display_height
+                    dy = (math.cos(step / self._display_height) * self._display_height) + self._display_height
+                    sc = (math.cos(step / self._display_height) * self._display_height) + self._display_width
+
+                    hue = math.sqrt(math.pow(x - dx, 2) + math.pow(y - dy, 2)) / sc
+                    r, g, b = [int(c * 255) for c in hsv_to_rgb(hue, 1, 1)]
+
+                    self._unicornhatmini.set_pixel(x, y, r, g, b)
+
+            self._unicornhatmini.show()
+            gevent.sleep(1.0 / 60)
+
+
+        self.clear_numbers()
+        self.clear_active_timers()

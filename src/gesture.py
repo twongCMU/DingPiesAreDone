@@ -9,6 +9,8 @@ from dingtimer import DingTimer as dt
 import gevent
 import board
 
+from thermo import Thermo
+
 APDS9960_DIR_NONE = 0
 APDS9960_DIR_UP = 1
 APDS9960_DIR_DOWN = 2
@@ -37,9 +39,11 @@ dirs = {
 }
 
 try:
-
+    t = Thermo()
     while True:
         gevent.sleep(0.2)
+        t.do_thermo()
+        
         motion = apds.gesture()
         print(f"got {motion}")
         if motion != APDS9960_DIR_NONE:
@@ -47,7 +51,7 @@ try:
             if motion == APDS9960_DIR_LEFT:
                 # Add one minute if there is a timer, start a 1 minute timer if not
                 if mytimer.active_timer_count() == 0:
-                    mytimer.start_timer(60)
+                    mytimer.start_timer(3)
                 else:
                     mytimer.add_time(60)
             elif motion == APDS9960_DIR_RIGHT:

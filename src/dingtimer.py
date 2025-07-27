@@ -3,9 +3,11 @@
 import time
 #import rainbowhat as rh
 from unicorn_mini import Unicorn
+from buzzer import Buzzer
 import gevent
 import sys
 import math
+import RPi.GPIO as GPIO
 
 TIMER_NUMBER = 3
 TIMER_MAX_ID = 2
@@ -22,31 +24,42 @@ class DingTimer:
         self._current_timer = 0 
 
         self._unicorn = Unicorn()
-        
+        self._buzzer = Buzzer()
+
     def start_timer(self, seconds: int):
         ret = self.get_free_timer()
         
         # if there are no timers available, make a noise
         if ret is None:
+            self._buzzer.start(90)
+            self._buzzer.ChangeFrequency(415.30)
             #rh.buzzer.midi_note(68, .5)
-            gevent.sleep(.5)
+            time.sleep(.5)
             #rh.buzzer.midi_note(60, .5)
+            self._buzzer.ChangeFrequency(261.63)
+            time.sleep(.5)
+            self._buzzer.stop()
             return
 
         print("Using timer " + str(ret))
         # make a noise just to have an auditory indication
+        self._buzzer.play_start_timer()
         #rh.buzzer.midi_note(80, .2)
 
+        mute_timer = False
+        if seconds <= 60:
+            mute_timer = True
+
         # partially update accounting so the gevent has it
-        self._timer_list[self._current_timer] = (False, time.time() + seconds, None)
+        self._timer_list[self._current_timer] = (mute_timer, time.time() + seconds, None)
         
         # spawn a timer async so that we can spawn new timers while that is running
         event = gevent.spawn(self._one_timer,self._current_timer)
 
         # update accounting then display timer LED
-        self._timer_list[self._current_timer] = (False, time.time() + seconds, event)
+        self._timer_list[self._current_timer] = (mute_timer, time.time() + seconds, event)
         self._set_active_timer_rainbow()
-        
+
         # print the timer here and block-sleep so even if another timer is
         # active we see the time for a moment before the other timer continues to be shown
         self._print_timer(seconds)
@@ -60,10 +73,15 @@ class DingTimer:
         # There might be a race here if a timer ends just as we add time to it
         (muted, end_time, event) = self._timer_list[self._current_timer]
         end_time += amount
+        if end_time-time.time() > 60 and muted:
+            muted = False
         self._timer_list[self._current_timer] = (muted, end_time, event)
+
+        self._buzzer.play_add_timer()
         #rh.buzzer.midi_note(60, .2)
-        gevent.sleep(.2)
+        #gevent.sleep(.2)
         #rh.buzzer.midi_note(100, .2)
+
         # This might make this timer longer than another one where we should call show_closest_timer
         # except then we can't continue to add time to this current timer so we don't do that.
         # It is rare that I use multiple timers and even more rare that I would add enough time
@@ -74,37 +92,15 @@ class DingTimer:
         # There might be a race here if a timer ends just as we subtract time from it
         (muted, end_time, event) = self._timer_list[self._current_timer]
         end_time -= amount
+        if end_time-time.time() < 60 and not muted:
+            muted = True
         self._timer_list[self._current_timer] = (muted, end_time, event)
 
+        self._buzzer.play_subtract_timer()
         #rh.buzzer.midi_note(100, .2)
-        gevent.sleep(.2)
+        #gevent.sleep(.2)
         #rh.buzzer.midi_note(60, .2)
         # see big comment in add_time
-
-    def timer_right(self):
-        """Switch to the timer to the right of the current one, if possible
-        """
-        self.timer_select(self._current_timer + 1)
-        self.illuminate_timer()
-        
-    def timer_left(self):
-        """Switch to the timer to the left of the current one, if possible
-        """
-        self.timer_select(self._current_timer - 1)
-        self.illuminate_timer()
-
-    def timer_select(self, t: int):
-        """Switch to a specific timer
-
-        Parameters:
-          t (int) the timer to use
-        """
-        if t < 0:
-            self._current_timer = 0
-        elif t > 2:
-            self._current_timer = 2
-        else:
-            self._current_timer = t
 
     def get_free_timer(self):
         """Find a free timer slot and set it as the current timer
@@ -123,17 +119,6 @@ class DingTimer:
                 return i
         return None
         
-    def illuminate_timer(self):
-        return
-        """
-        if self._current_timer == 0:
-            rh.lights.rgb(1, 0, 0)
-        if self._current_timer == 1:
-            rh.lights.rgb(0, 1, 0)
-        if self._current_timer == 2:
-            rh.lights.rgb(0, 0, 1)
-        """
-
     def _set_active_timer_rainbow(self):
         """ Light the LEDs for active timer
         An active timer is one that is counting down and not done yet
@@ -147,15 +132,15 @@ class DingTimer:
         the right pixel
         """
         t = time.time()
-        """
+        active_list = []
         for i in range(3):
             (muted, end_time, event) = self._timer_list[i]        
             if end_time > t:
-                rh.rainbow.set_pixel(6-(i*3), 50, 50, 50)
+                active_list.append(True)
             else:
-                rh.rainbow.set_pixel(6-(i*3), 0, 0, 0)
-        rh.rainbow.show()
-        """
+                active_list.append(False)
+        self._unicorn.set_active_timers(active_list)
+        
     def _clear_timer(self, id: int):
         self._timer_list[id] = (False, 0, None)
 
@@ -206,15 +191,12 @@ class DingTimer:
 
         if closest_id == TIMER_BOGUS_ID:
             print("No timer to show")
-            self._unicorn.clear_screen()
+            self._unicorn.clear_numbers()
             return
         
         for i in range(3):
             if i == closest_id:
-                self._unmute_timer(i)
                 self._current_timer = i
-            else:
-                self._mute_timer(i)
 
     def _print_timer(self, seconds: int):
         m = int(seconds/60.0)
@@ -232,20 +214,27 @@ class DingTimer:
 
     def _one_timer(self, timer_id: int):
         cur_time = time.time()
-        
-        warning_sent = False
-        if self._get_timer_end_time(timer_id) - cur_time < 60:
-            warning_sent = True
+
+        #warning_sent = False
+        #if self._get_timer_end_time(timer_id) - cur_time < 60:
+        #    warning_sent = True
+        #    print("setting warning set to true")
         while cur_time < self._get_timer_end_time(timer_id):
-            if not self._is_timer_muted(timer_id):
+            print(f"cur timer is {self._current_timer}")
+            if self._current_timer == timer_id:
                 time_left = math.ceil(self._get_timer_end_time(timer_id) - cur_time)
                 self._print_timer(time_left)
+                #print(f"warning sent {warning_sent}")
+                if not self._is_timer_muted(timer_id) and time_left <= 60:
+                    self._buzzer.play_timer_oneminute_warning()
+                    #rh.buzzer.midi_note(60, 1)
+                    #gevent.sleep(.5)
+                    #rh.buzzer.midi_note(60, 1)
+                    #warning_sent = True
 
-                if time_left <= 60 and not warning_sent:
-                    #rh.buzzer.midi_note(60, 1)
-                    gevent.sleep(.5)
-                    #rh.buzzer.midi_note(60, 1)
-                    warning_sent = True
+                    # Mute the timer
+                    self._mute_timer(timer_id)
+                    
             gevent.sleep(.5)
             cur_time = time.time()
 
@@ -260,11 +249,14 @@ class DingTimer:
         # multiple timers to end at the same time
         #rh.rainbow.set_all(255,255,255)
         #rh.rainbow.show()
+        gevent.spawn(self._unicorn.show_rainbow, 5)
+        gevent.spawn(self._buzzer.play_timer_done)
         #rh.buzzer.midi_note(60, 5)
         #rh.buzzer.midi_note(68, 5)
         rgb_r = 255
         rgb_g = 255
         rgb_b = 0
+        """
         for _ in range(50):
             temp = rgb_r
             rgb_r = rgb_g
@@ -273,15 +265,15 @@ class DingTimer:
             #rh.rainbow.set_all(rgb_r, rgb_g, rgb_b)
             #rh.rainbow.show()
             gevent.sleep(.1)
+        """
 
         #rh.rainbow.clear()
         #rh.rainbow.show()
-        self._unicorn.clear_screen()
+        self._unicorn.clear_numbers()
 
         # we just lit the rainbow for the timer finishing so
         # reset the rainbow to show active timers
         self._set_active_timer_rainbow()
-
 
     def cancel_timer(self):
         """Cancel the current timer

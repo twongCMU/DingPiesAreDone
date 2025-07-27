@@ -7,6 +7,7 @@ import qwiic
 
 class RangeFinder:
     def __init__(self):
+        """
         self._tof = qwiic.QwiicVL53L1X()
         if self._tof.sensor_init() is None:
             print("Sensor online!\n")
@@ -14,7 +15,8 @@ class RangeFinder:
         # set it to short range mode so it returns data faster
         # but is limited to 1.3 meters which is enough for kitchen use
         self._tof.set_distance_mode(1)
-
+        """
+        return
 
     def get_time(self) -> int:
         return 5

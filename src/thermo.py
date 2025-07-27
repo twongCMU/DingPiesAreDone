@@ -1,8 +1,10 @@
+from buzzer import Buzzer
 from knob import Knob
 from unicorn_mini import Unicorn
 import adafruit_mlx90640
 import board
 import busio
+import gevent
 import time
 
 class Thermo:
@@ -26,6 +28,7 @@ class Thermo:
         # cooking purposes, 2 frames per second should be plenty
         self._mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_2_HZ
 
+        self._buzzer = Buzzer()
     def do_thermo(self):
         """If knob has changed, run full thermo sequence,
         otherwise nothing"""
@@ -63,6 +66,12 @@ class Thermo:
             print(f"Threshold_met {threshold_met} ready {ready}")
             if threshold_met and ready:
                 break
+
+            break
+
+        print("OOOOO")
+        gevent.spawn(self._unicorn.show_rainbow, 5)
+        gevent.spawn(self._buzzer.play_timer_done)
         print("DONEEEEE")
 
     def get_target_temp(self) -> int:
@@ -78,11 +87,11 @@ class Thermo:
 
                 temperature = self._start_temp + self._increment_temp*last_change_val
                 print(f"{time_lastchanged}: {temperature}")
-                self._unicorn.write_number(temperature)
+                self._unicorn.write_four(temperature)
                 last_change_val = current_change_val
             time.sleep(.1)
         print(f"Final: {temperature}")
-        self._unicorn.write_number(temperature)
+        self._unicorn.write_four(temperature)
         self._knob.reinit()
 
         return temperature
