@@ -249,8 +249,8 @@ class DingTimer:
         # multiple timers to end at the same time
         #rh.rainbow.set_all(255,255,255)
         #rh.rainbow.show()
-        gevent.spawn(self._unicorn.show_rainbow, 5)
-        gevent.spawn(self._buzzer.play_timer_done)
+        done_r = gevent.spawn(self._unicorn.show_rainbow, 5)
+        done_b = gevent.spawn(self._buzzer.play_timer_done)
         #rh.buzzer.midi_note(60, 5)
         #rh.buzzer.midi_note(68, 5)
         rgb_r = 255
@@ -266,7 +266,9 @@ class DingTimer:
             #rh.rainbow.show()
             gevent.sleep(.1)
         """
-
+        # Wait for alarm to be done before we clear the display state
+        gevent.wait([done_r, done_b])
+        
         #rh.rainbow.clear()
         #rh.rainbow.show()
         self._unicorn.clear_numbers()
