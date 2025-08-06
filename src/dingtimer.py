@@ -17,10 +17,10 @@ class DingTimer:
     def __init__(self, display, buzzer):
         """this code was developed for 3 timers due to the hardware I was using
         """
-        # each timer is a tuple of muted T/F, the end time, and the gevent handle
+        # Each timer is a tuple of muted T/F, the end time, and the gevent handle
         self._timer_list = [(False, 0, None)] * TIMER_NUMBER
 
-        # start with left timer
+        # Start with left timer
         self._current_timer = 0 
 
         self._unicorn = display
@@ -29,31 +29,28 @@ class DingTimer:
     def start_timer(self, seconds: int):
         ret = self.get_free_timer()
         
-        # if there are no timers available, make a noise
+        # If there are no timers available, make a noise
         if ret is None:
             self._buzzer.start(90)
             self._buzzer.ChangeFrequency(415.30)
-            #rh.buzzer.midi_note(68, .5)
             time.sleep(.5)
-            #rh.buzzer.midi_note(60, .5)
             self._buzzer.ChangeFrequency(261.63)
             time.sleep(.5)
             self._buzzer.stop()
             return
 
         print("Using timer " + str(ret))
-        # make a noise just to have an auditory indication
+        # Make a noise just to have an auditory indication
         self._buzzer.play_start_timer()
-        #rh.buzzer.midi_note(80, .2)
 
         mute_timer = False
         if seconds <= 60:
             mute_timer = True
 
-        # partially update accounting so the gevent has it
+        # Partially update accounting so the gevent has it
         self._timer_list[self._current_timer] = (mute_timer, time.time() + seconds, None)
         
-        # spawn a timer async so that we can spawn new timers while that is running
+        # Spawn a timer async so that we can spawn new timers while that is running
         event = gevent.spawn(self._one_timer,self._current_timer)
 
         # update accounting then display timer LED
@@ -78,9 +75,6 @@ class DingTimer:
         self._timer_list[self._current_timer] = (muted, end_time, event)
 
         self._buzzer.play_add_timer()
-        #rh.buzzer.midi_note(60, .2)
-        #gevent.sleep(.2)
-        #rh.buzzer.midi_note(100, .2)
 
         # This might make this timer longer than another one where we should call show_closest_timer
         # except then we can't continue to add time to this current timer so we don't do that.
@@ -97,10 +91,7 @@ class DingTimer:
         self._timer_list[self._current_timer] = (muted, end_time, event)
 
         self._buzzer.play_subtract_timer()
-        #rh.buzzer.midi_note(100, .2)
-        #gevent.sleep(.2)
-        #rh.buzzer.midi_note(60, .2)
-        # see big comment in add_time
+        # See big comment in add_time
 
     def get_free_timer(self):
         """Find a free timer slot and set it as the current timer
@@ -215,22 +206,14 @@ class DingTimer:
     def _one_timer(self, timer_id: int):
         cur_time = time.time()
 
-        #warning_sent = False
-        #if self._get_timer_end_time(timer_id) - cur_time < 60:
-        #    warning_sent = True
-        #    print("setting warning set to true")
         while cur_time < self._get_timer_end_time(timer_id):
             print(f"cur timer is {self._current_timer}")
             if self._current_timer == timer_id:
                 time_left = math.ceil(self._get_timer_end_time(timer_id) - cur_time)
                 self._print_timer(time_left)
-                #print(f"warning sent {warning_sent}")
+
                 if not self._is_timer_muted(timer_id) and time_left <= 60:
                     self._buzzer.play_timer_oneminute_warning()
-                    #rh.buzzer.midi_note(60, 1)
-                    #gevent.sleep(.5)
-                    #rh.buzzer.midi_note(60, 1)
-                    #warning_sent = True
 
                     # Mute the timer
                     self._mute_timer(timer_id)
@@ -240,40 +223,22 @@ class DingTimer:
 
         self._unicorn.write_four("00")
         
-        # this timer is done. Show another timer if needed
+        # This timer is done. Show another timer if needed
         # while the alarm goes off
         self.show_closest_timer()
         
         # it's possible to light the rainbow here while another timer
         # is also doing so but I think we can blame the user it they set
         # multiple timers to end at the same time
-        #rh.rainbow.set_all(255,255,255)
-        #rh.rainbow.show()
         done_r = gevent.spawn(self._unicorn.show_rainbow, 5)
         done_b = gevent.spawn(self._buzzer.play_timer_done)
-        #rh.buzzer.midi_note(60, 5)
-        #rh.buzzer.midi_note(68, 5)
-        rgb_r = 255
-        rgb_g = 255
-        rgb_b = 0
-        """
-        for _ in range(50):
-            temp = rgb_r
-            rgb_r = rgb_g
-            rgb_g = rgb_b
-            rgb_b = temp
-            #rh.rainbow.set_all(rgb_r, rgb_g, rgb_b)
-            #rh.rainbow.show()
-            gevent.sleep(.1)
-        """
+
         # Wait for alarm to be done before we clear the display state
         gevent.wait([done_r, done_b])
-        
-        #rh.rainbow.clear()
-        #rh.rainbow.show()
+
         self._unicorn.clear_numbers()
 
-        # we just lit the rainbow for the timer finishing so
+        # We just lit the rainbow for the timer finishing so
         # reset the rainbow to show active timers
         self._set_active_timer_rainbow()
 
