@@ -1,15 +1,17 @@
 #!/usr/bin/python3
 
 from adafruit_apds9960.apds9960 import APDS9960
+from buzzer import Buzzer
+from dingtimer import DingTimer as dt
+from knob import Knob
+from thermo import Thermo
+from unicorn_mini import Unicorn
+
 import RPi.GPIO as GPIO
 
-from rangefinder import RangeFinder
-
-from dingtimer import DingTimer as dt
-import gevent
 import board
-
-from thermo import Thermo
+import gevent
+import time
 
 APDS9960_DIR_NONE = 0
 APDS9960_DIR_UP = 1
@@ -26,8 +28,16 @@ apds = APDS9960(i2c)
 apds.enable_gesture = True
 apds.enable_proximity = True
 
-mytimer = dt()
+unicorn = Unicorn()
+buzzer = Buzzer()
+mytimer = dt(unicorn, buzzer)
 
+# for my hardware this is the black knob
+# Used to set timer input. This is separate from the knob for thermo input
+k = Knob(0x37)
+
+t = Thermo(unicorn, buzzer)
+    
 dirs = {
     APDS9960_DIR_NONE: "none",
     APDS9960_DIR_LEFT: "left",
@@ -38,12 +48,50 @@ dirs = {
     APDS9960_DIR_FAR: "far",
 }
 
+def get_target_time_minutes(knob) -> int:
+    """Poll the knob for the number of minutes
+
+    I don't need this yet but we can use the knob pushbutton for something like
+    adding 30 seconds or instantly locking in the selection """
+
+    timeout_secs = 2 # how long to wait before locking in selection
+    start_minutes = 2 # initial number of minutes when starting a timer via knob input
+    
+    time_lastchanged = time.time()
+    last_change_val = 0
+    target_minutes = 0
+    while (time.time() - time_lastchanged < timeout_secs):
+        current_change_val = knob.get_changed()
+        if current_change_val != last_change_val:
+            time_lastchanged = time.time()
+
+            target_minutes = start_minutes + last_change_val
+            print(f"{time_lastchanged}: {target_minutes}")
+            unicorn.write_four(str(target_minutes)+"00")
+            last_change_val = current_change_val
+        time.sleep(.1)
+    print(f"Final: {target_minutes}")
+    unicorn.write_four(str(target_minutes)+"00")
+    knob.reinit()
+
+    return target_minutes
+
 try:
-    t = Thermo()
+    
     while True:
+        # don't poll too often so we don't waste power
         gevent.sleep(0.2)
+
+        # check if there is a request for the temperature alarm
         t.do_thermo()
-        
+
+        # check if there is a request for the long timer via knob
+        if k.get_changed() != 0:
+            mytimer.mute_all()
+            target_time_minutes = get_target_time_minutes(k)
+            mytimer.start_timer(target_time_minutes*60)
+
+        # check if there is a request for timer via gesture
         motion = apds.gesture()
         print(f"got {motion}")
         if motion != APDS9960_DIR_NONE:
@@ -61,14 +109,7 @@ try:
                     
             elif motion == APDS9960_DIR_UP:
                 mytimer.cancel_timer()
-            elif motion == APDS9960_DIR_DOWN:
-                mytimer.mute_all()
-                rf = RangeFinder()
-                minutes = rf.get_time()
-                if minutes is not None:
-                    mytimer.start_timer(minutes*60)
-                else:
-                    mytimer.show_closest_timer()
+
             print("Gesture={}".format(dirs.get(motion, "unknown")))
 
 

@@ -14,7 +14,7 @@ TIMER_MAX_ID = 2
 TIMER_BOGUS_ID = TIMER_MAX_ID + 1
 class DingTimer:
 
-    def __init__(self):
+    def __init__(self, display, buzzer):
         """this code was developed for 3 timers due to the hardware I was using
         """
         # each timer is a tuple of muted T/F, the end time, and the gevent handle
@@ -23,8 +23,8 @@ class DingTimer:
         # start with left timer
         self._current_timer = 0 
 
-        self._unicorn = Unicorn()
-        self._buzzer = Buzzer()
+        self._unicorn = display
+        self._buzzer = buzzer
 
     def start_timer(self, seconds: int):
         ret = self.get_free_timer()

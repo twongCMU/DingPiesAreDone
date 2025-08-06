@@ -1,6 +1,4 @@
-from buzzer import Buzzer
 from knob import Knob
-from unicorn_mini import Unicorn
 import adafruit_mlx90640
 import board
 import busio
@@ -8,9 +6,10 @@ import gevent
 import time
 
 class Thermo:
-    def __init__(self):
-        self._knob = Knob()
-        self._unicorn = Unicorn()
+    def __init__(self, display, buzzer):
+        # Knob 0x36 is the blue one in my configuration
+        self._knob = Knob(0x36)
+        self._unicorn = display
         
         # camera might pick up stuff outside of the heated surface; ignore
         # anything below this temp
@@ -28,7 +27,7 @@ class Thermo:
         # cooking purposes, 2 frames per second should be plenty
         self._mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_2_HZ
 
-        self._buzzer = Buzzer()
+        self._buzzer = buzzer
     def do_thermo(self):
         """If knob has changed, run full thermo sequence,
         otherwise nothing"""

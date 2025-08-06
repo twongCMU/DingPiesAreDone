@@ -2,11 +2,11 @@ import board
 from adafruit_seesaw import digitalio, rotaryio, seesaw
 
 class Knob:
-    def __init__(self):
+    def __init__(self, knob_id):
         # Most of the init code is taken from the example code
         # in the seesaw library
         i2c = board.I2C()  # uses board.SCL and board.SDA
-        s = seesaw.Seesaw(i2c, addr=0x36)
+        s = seesaw.Seesaw(i2c, addr=knob_id)
 
         seesaw_product = (s.get_version() >> 16) & 0xFFFF
         print(f"Found product {seesaw_product}")
