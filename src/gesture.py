@@ -13,6 +13,7 @@ import board
 import gevent
 import time
 
+
 APDS9960_DIR_NONE = 0
 APDS9960_DIR_UP = 1
 APDS9960_DIR_DOWN = 2
@@ -22,11 +23,11 @@ APDS9960_DIR_NEAR = 5
 APDS9960_DIR_FAR = 6
 
 port = 1
-
 i2c = board.I2C()
-apds = APDS9960(i2c)
+apds = APDS9960(i2c, rotation=90)
 apds.enable_gesture = True
 apds.enable_proximity = True
+apds.gesture_gain = 3 # from the docs: 0=1x, 1=2x, 2=4x, 3=8x 
 
 unicorn = Unicorn()
 buzzer = Buzzer()
@@ -55,7 +56,7 @@ def get_target_time_minutes(knob) -> int:
     adding 30 seconds or instantly locking in the selection """
 
     timeout_secs = 2 # how long to wait before locking in selection
-    start_minutes = 2 # initial number of minutes when starting a timer via knob input
+    start_minutes = 1 # initial number of minutes when starting a timer via knob input
     
     time_lastchanged = time.time()
     last_change_val = 0
@@ -65,7 +66,7 @@ def get_target_time_minutes(knob) -> int:
         if current_change_val != last_change_val:
             time_lastchanged = time.time()
 
-            target_minutes = start_minutes + last_change_val
+            target_minutes = start_minutes + current_change_val
             print(f"{time_lastchanged}: {target_minutes}")
             unicorn.write_four(str(target_minutes)+"00")
             last_change_val = current_change_val
@@ -77,7 +78,6 @@ def get_target_time_minutes(knob) -> int:
     return target_minutes
 
 try:
-    
     while True:
         # don't poll too often so we don't waste power
         gevent.sleep(0.2)
@@ -92,26 +92,25 @@ try:
             mytimer.start_timer(target_time_minutes*60)
 
         # check if there is a request for timer via gesture
+        # Warning: for some reason this hangs if there is something in close proximity
+        # so when testing make sure there is nothing in front of it
         motion = apds.gesture()
-        print(f"got {motion}")
         if motion != APDS9960_DIR_NONE:
-            # Note: the sensor is mounted upside-down in my device so these are all reversed
-            if motion == APDS9960_DIR_LEFT:
+            if motion == APDS9960_DIR_RIGHT:
                 # Add one minute if there is a timer, start a 1 minute timer if not
                 if mytimer.active_timer_count() == 0:
-                    mytimer.start_timer(3)
+                    mytimer.start_timer(60)
                 else:
                     mytimer.add_time(60)
-            elif motion == APDS9960_DIR_RIGHT:
+            elif motion == APDS9960_DIR_LEFT:
                 # Subtract one minute if there is an active timer
                 if mytimer.active_timer_count() > 0:
                     mytimer.subtract_time(60)
                     
-            elif motion == APDS9960_DIR_UP:
+            elif motion == APDS9960_DIR_DOWN:
                 mytimer.cancel_timer()
 
             print("Gesture={}".format(dirs.get(motion, "unknown")))
-
 
 finally:
     GPIO.cleanup()
