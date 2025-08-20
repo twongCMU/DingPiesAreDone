@@ -13,9 +13,11 @@ class Thermo:
         
         # camera might pick up stuff outside of the heated surface; ignore
         # anything below this temp
-        self._threshold_temp = 150
-        
-        self._start_temp = 350
+        self._threshold_temp = 50
+
+        # Thermo is enabled by a knob turn so the first temp displayed is
+        # start_temp +- increment_temp not start_temp alone
+        self._start_temp = 375
         self._increment_temp = 25
         self._timeout_secs = 2 # how long to wait to lock in final value
 
@@ -28,6 +30,7 @@ class Thermo:
         self._mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_2_HZ
 
         self._buzzer = buzzer
+
     def do_thermo(self):
         """If knob has changed, run full thermo sequence,
         otherwise nothing"""
@@ -39,11 +42,12 @@ class Thermo:
         self.wait_for_target(target_temp)
 
     def wait_for_target(self, target_temp):
-        frame = [0]*768
+        frame_c = [0]*768
+        frame_f = [0]*768
         threshold_met = False
         while True:
             try:
-                self._mlx.getFrame(frame)
+                self._mlx.getFrame(frame_c)
             except ValueError:
                 continue
 
@@ -52,7 +56,8 @@ class Thermo:
             threshold_met = False
             for h in range(24):
                 for w in range(32):
-                    t = (frame[h*32 + w]*9/5)+32
+                    t = (frame_c[h*32 + w]*9/5)+32
+                    frame_f[h*32 + w] = t
                     print("%0.1f, " % t, end="")
                     if t > self._threshold_temp and t < target_temp:
                         ready = False
@@ -64,6 +69,9 @@ class Thermo:
                 print()
             print()
             print(f"Threshold_met {threshold_met} ready {ready}")
+            
+            self._unicorn.show_thermo(frame_f, self._threshold_temp, target_temp)
+            
             if threshold_met and ready:
                 print("Threshold met")
                 threshold_met = True
@@ -73,9 +81,12 @@ class Thermo:
                 break
 
         if threshold_met:
-            gevent.spawn(self._unicorn.show_rainbow, 5)
-            gevent.spawn(self._buzzer.play_timer_done)
-
+            done_r = gevent.spawn(self._unicorn.show_rainbow, 5)
+            done_b = gevent.spawn(self._buzzer.play_timer_done)
+            
+            # Wait for alarm to be done before we clear the display state
+            gevent.wait([done_r, done_b])
+            
         self._unicorn.clear_display()
 
         print("DONEEEEE")
@@ -91,7 +102,7 @@ class Thermo:
             if current_change_val != last_change_val:
                 time_lastchanged = time.time()
 
-                temperature = self._start_temp + self._increment_temp*last_change_val
+                temperature = self._start_temp + self._increment_temp*current_change_val
                 print(f"{time_lastchanged}: {temperature}")
                 self._unicorn.write_four(temperature)
                 last_change_val = current_change_val
