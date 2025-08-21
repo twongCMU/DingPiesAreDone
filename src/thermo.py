@@ -13,7 +13,7 @@ class Thermo:
         
         # camera might pick up stuff outside of the heated surface; ignore
         # anything below this temp
-        self._threshold_temp = 50
+        self._threshold_temp = 100
 
         # Thermo is enabled by a knob turn so the first temp displayed is
         # start_temp +- increment_temp not start_temp alone
@@ -31,6 +31,8 @@ class Thermo:
 
         self._buzzer = buzzer
 
+        self._continue_thermo = None
+        
     def do_thermo(self):
         """If knob has changed, run full thermo sequence,
         otherwise nothing"""
@@ -41,11 +43,15 @@ class Thermo:
         target_temp = self.get_target_temp()
         self.wait_for_target(target_temp)
 
-    def wait_for_target(self, target_temp):
+    def wait_for_target(self, target_temp):        
         frame_c = [0]*768
         frame_f = [0]*768
         threshold_met = False
-        while True:
+
+        self._continue_thermo = True
+        while self._continue_thermo:
+            # Yield thread in case we want to start a timer too
+            gevent.sleep(0.1) 
             try:
                 self._mlx.getFrame(frame_c)
             except ValueError:
@@ -54,19 +60,35 @@ class Thermo:
             print(f"Target temp {target_temp}")
             ready = True
             threshold_met = False
+
+            stat_cold = 0
+            stat_going = 0
+            stat_done = 0
+
             for h in range(24):
                 for w in range(32):
                     t = (frame_c[h*32 + w]*9/5)+32
                     frame_f[h*32 + w] = t
-                    print("%0.1f, " % t, end="")
+                    #print("%0.1f, " % t, end="")
+
+                    if t <= self._threshold_temp:
+                        stat_cold += 1
+                    elif t < target_temp:
+                        stat_going += 1
+                    elif t >= target_temp:
+                        stat_done += 1
+                        
                     if t > self._threshold_temp and t < target_temp:
                         ready = False
 
                     # In case everything is below the threshold
                     if t > self._threshold_temp:
                         threshold_met = True
-                        
-                print()
+
+            ### can trigger alarm if stat_done > stat_going I guess but might need to
+            # trigger the alarm much earlier so I have time to get over to the stove
+            
+            print(f"Stats: cold {stat_cold}, going {stat_going}, done {stat_done}, treshold {threshold_met}, ready {ready}")
             print()
             print(f"Threshold_met {threshold_met} ready {ready}")
             
@@ -78,6 +100,7 @@ class Thermo:
                 break
             if self._knob.is_button_pressed():
                 print("Button is pressed")
+                threshold_met = False
                 break
 
         if threshold_met:
@@ -91,6 +114,10 @@ class Thermo:
 
         print("DONEEEEE")
 
+    def end_thermo(self):
+        # This assumes the caller will yield the gevent thread so we don't do it here
+        self.continue_thermo = False
+        
     def get_target_temp(self) -> int:
         """Poll the knob for the target temp, returns integer temperature"""
         

@@ -38,6 +38,8 @@ class Unicorn:
 
         hue = .530
         self._active_r, self._active_g, self._active_b = [int(c * 255) for c in hsv_to_rgb(hue, 1.0, 1.0)]
+
+        self._blink_on = True
         
     def write_four(self, text):
         """ Writes up to 4 digits. If there are a full 4, the leftmost must be a 1
@@ -90,7 +92,7 @@ class Unicorn:
             # Each digit has a trailing space after it. For the last one, truncate this
             text_width -= 1
 
-        print(f"{text_height}x{text_width} value {text} at index {index}. image_offset {image_x_offset} display offset {display_x_offset}")
+        #print(f"{text_height}x{text_width} value {text} at index {index}. image_offset {image_x_offset} display offset {display_x_offset}")
 
         # The generated image has a row of blank pixels at the top. It looks nice but we remove
         # it so we have more screen space to work with
@@ -99,12 +101,12 @@ class Unicorn:
         for y in range(text_y_offset, text_height):
             for x in range(text_width):
                 if image.getpixel((x+image_x_offset, y)) == 255:
-                    print("x",end="")
+                    #print("x",end="")
                     self._unicornhatmini.set_pixel(x+display_x_offset, y+display_y_offset, self._timer_r, self._timer_g, self._timer_b)
-                else:
-                    print(".",end="")
+                #else:
+                #    print(".",end="")
 
-            print()
+            #print()
         print()
 
 
@@ -167,3 +169,61 @@ class Unicorn:
 
         self.clear_numbers()
         self.clear_active_timers()
+
+        
+    def show_thermo(self, data, threshold_temp, target_temp):
+        """ data from the thermal camera is 24 high x 32 wide so the input is a list of 768 values.
+        Get the value with data[h*32 + w] with h 0-23 and w 0-32
+
+        our display is 7 high by 17 wide"""
+
+        print(f"threshold {threshold_temp}, target {target_temp}, ex {data[0]}")
+        display_data = [0]*7*17
+
+        for display_row, data_row in enumerate(range(2,24,3)):
+            for display_column, data_column in enumerate(range(1, 32, 2)):
+                d = data[data_row*32 + data_column]
+                # faint blue if below threshold
+                r = 0
+                g = 0
+                b = 10
+                if d >= threshold_temp and d < target_temp - 50:
+                    intensity_pct = (d - threshold_temp) / (target_temp - threshold_temp)
+                    r = 0
+                    g = round(intensity_pct * 100)
+                    if intensity_pct > .5 and not self._blink_on:
+                        g = 0
+                    b = 75
+
+                if d >= target_temp - 50 and d < target_temp:
+                    if self._blink_on:
+                        r = 100
+                    else:
+                        r = 30
+                    g = 0
+                    b = 0
+
+                if d >= target_temp:
+                    r = 200
+                    g = 0
+                    b = 0
+                    
+
+                self._unicornhatmini.set_pixel(display_column, display_row, r, g, b)
+                
+                if b > 0:
+                    print(".",end="")
+                elif g > 0:
+                    print("o",end="")
+                elif r > 0:
+                    print("X",end="")
+            print()
+        print()
+        self._unicornhatmini.show()
+        
+        if self._blink_on:
+            self._blink_on = False
+        else:
+            self._blink_on = True
+            
+        

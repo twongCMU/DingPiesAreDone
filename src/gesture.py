@@ -106,7 +106,8 @@ try:
                 # Subtract one minute if there is an active timer
                 if mytimer.active_timer_count() > 0:
                     mytimer.subtract_time(60)
-                    
+            elif motion == APDS9960_DIR_UP:
+                t.end_thermo()
             elif motion == APDS9960_DIR_DOWN:
                 mytimer.cancel_timer()
 
