@@ -21,6 +21,10 @@ various wires - I soldered wires to the gensture sensor and connected them to th
 When I connected the Rainbow Hat to the GPIO pins there is a gap which is enough to put the Shim in there to connect to the distance sensor. However the gap is too wide to get a good connection so I forced a little bit of folded paper in the gap to put pressure on the shim. It's hacky.
 
 ## Setting up a Pi (in my case, a Pi Zero W)
+run sudo raspi-config
+* enable spi and i2c in interfacing options
+* this modifies /boot/config.txt so do this first
+
 in /boot/config.txt add:
 * dtoverlay=pi3-disable-bt  <--if want to disable bluetooth
 * dtparam=i2c_arm=on,i2c_baudrate=400000  
@@ -28,8 +32,7 @@ in /boot/config.txt add:
 uncomment:
 * dtparam=spi=on
 
-run sudo raspi-config
-* enable spi and i2c in interfacing options
+
 
 apt-get install python3-venv python3-setuptools screen pimoroni python3-rainbowhat python-rpi.gpio python3-rpi.gpio
 
@@ -45,6 +48,8 @@ source venv/bin/activate
 * pip install apds9960
 * pip install sparkfun-qwiic  <-- 7/31/2020 404 error see https://github.com/sparkfun/Qwiic_Py/issues/5 I ended up cloning the git repo, deleting the affected dir, then doing an install
 * pip install gevent
+
+* apds9960 above is a 3rd party library that implements a Python wrapper for the C driver https://github.com/liske/python-apds9960
 
 ## Running it
 source venv/bin/activate
