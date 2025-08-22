@@ -27,7 +27,10 @@ i2c = board.I2C()
 apds = APDS9960(i2c, rotation=90)
 apds.enable_gesture = True
 apds.enable_proximity = True
-apds.gesture_gain = 3 # from the docs: 0=1x, 1=2x, 2=4x, 3=8x 
+
+#### I think setting this to 3 burned out 2 of my sensors. They still work but
+#with almost zero range. Better to leave this the the default of 2
+#apds.gesture_gain = 2 # from the docs: 0=1x, 1=2x, 2=4x, 3=8x 
 
 unicorn = Unicorn()
 buzzer = Buzzer()
