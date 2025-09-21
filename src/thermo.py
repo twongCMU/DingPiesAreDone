@@ -13,12 +13,12 @@ class Thermo:
         
         # camera might pick up stuff outside of the heated surface; ignore
         # anything below this temp
-        self._threshold_temp = 100
+        self._threshold_temp_c = self.f_to_c(100)
 
         # Thermo is enabled by a knob turn so the first temp displayed is
         # start_temp +- increment_temp not start_temp alone
-        self._start_temp = 375
-        self._increment_temp = 25
+        self._start_temp_f = 375
+        self._increment_temp_f = 25
         self._timeout_secs = 2 # how long to wait to lock in final value
 
         # From the adafruit sample code
@@ -32,6 +32,9 @@ class Thermo:
         self._buzzer = buzzer
 
         self._continue_thermo = None
+
+    def f_to_c(self, f):
+        return (f-32) * 5 / 9
         
     def do_thermo(self):
         """If knob has changed, run full thermo sequence,
@@ -40,64 +43,35 @@ class Thermo:
         if self._knob.get_changed() == 0:
             return
 
-        target_temp = self.get_target_temp()
-        self.wait_for_target(target_temp)
+        target_temp_c = self.get_target_temp_c()
+        #self.wait_for_target(target_temp_c)
+        # Spawn a thread so that we can still create timers or cancel thermo from the caller
+        gevent.spawn(self.wait_for_target, target_temp_c)
 
-    def wait_for_target(self, target_temp):        
+    def wait_for_target(self, target_temp_c):        
         frame_c = [0]*768
-        frame_f = [0]*768
         threshold_met = False
 
         self._continue_thermo = True
         while self._continue_thermo:
             # Yield thread in case we want to start a timer too
-            gevent.sleep(0.1) 
+            # This delay has a large effect on the CPU usage. On a pi zero w, 0.1 results
+            # in CPU usage of 70-80%. 0.2 is 60-70%
+            gevent.sleep(0.2) 
             try:
                 self._mlx.getFrame(frame_c)
             except ValueError:
                 continue
 
-            print(f"Target temp {target_temp}")
-            ready = True
-            threshold_met = False
+            print(f"Target temp {target_temp_c} C")
 
-            stat_cold = 0
-            stat_going = 0
-            stat_done = 0
-
-            for h in range(24):
-                for w in range(32):
-                    t = (frame_c[h*32 + w]*9/5)+32
-                    frame_f[h*32 + w] = t
-                    #print("%0.1f, " % t, end="")
-
-                    if t <= self._threshold_temp:
-                        stat_cold += 1
-                    elif t < target_temp:
-                        stat_going += 1
-                    elif t >= target_temp:
-                        stat_done += 1
-                        
-                    if t > self._threshold_temp and t < target_temp:
-                        ready = False
-
-                    # In case everything is below the threshold
-                    if t > self._threshold_temp:
-                        threshold_met = True
-
+                       
             ### can trigger alarm if stat_done > stat_going I guess but might need to
             # trigger the alarm much earlier so I have time to get over to the stove
+                        
+            [stat_cold, stat_going, stat_done] = self._unicorn.show_thermo(frame_c, self._threshold_temp_c, target_temp_c)
+            print(f"Stats: cold {stat_cold}, going {stat_going}, done {stat_done}, treshold {threshold_met}")
             
-            print(f"Stats: cold {stat_cold}, going {stat_going}, done {stat_done}, treshold {threshold_met}, ready {ready}")
-            print()
-            print(f"Threshold_met {threshold_met} ready {ready}")
-            
-            self._unicorn.show_thermo(frame_f, self._threshold_temp, target_temp)
-            
-            if threshold_met and ready:
-                print("Threshold met")
-                threshold_met = True
-                break
             if self._knob.is_button_pressed():
                 print("Button is pressed")
                 threshold_met = False
@@ -112,13 +86,11 @@ class Thermo:
             
         self._unicorn.clear_display()
 
-        print("DONEEEEE")
-
     def end_thermo(self):
         # This assumes the caller will yield the gevent thread so we don't do it here
-        self.continue_thermo = False
+        self._continue_thermo = False
         
-    def get_target_temp(self) -> int:
+    def get_target_temp_c(self) -> int:
         """Poll the knob for the target temp, returns integer temperature"""
         
         time_lastchanged = time.time()
@@ -129,7 +101,7 @@ class Thermo:
             if current_change_val != last_change_val:
                 time_lastchanged = time.time()
 
-                temperature = self._start_temp + self._increment_temp*current_change_val
+                temperature = self._start_temp_f + self._increment_temp_f*current_change_val
                 print(f"{time_lastchanged}: {temperature}")
                 self._unicorn.write_four(temperature)
                 last_change_val = current_change_val
@@ -138,4 +110,4 @@ class Thermo:
         self._unicorn.write_four(temperature)
         self._knob.reinit()
 
-        return temperature
+        return self.f_to_c(temperature)

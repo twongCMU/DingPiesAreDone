@@ -44,7 +44,11 @@ class Unicorn:
     def write_four(self, text):
         """ Writes up to 4 digits. If there are a full 4, the leftmost must be a 1
         since 4 full digits don't fit
+
+        Returns a list of values that were set
         """
+
+        res = [False] * self._display_width * self._display_height
         
         if int(text) == text:
             text = str(text)
@@ -52,11 +56,13 @@ class Unicorn:
         self.clear_numbers(show=False)
         index_start = 4 - len(text)
         for i in range(len(text)):
-            self.write_one(text[i], index_start + i)
+            self.write_one(text[i], index_start + i, res)
             
         self._unicornhatmini.show()
-        
-    def write_one(self, text, index):
+
+        return res
+    
+    def write_one(self, text, index, res):
         """ Write one digit. Index is 0 for leftmost digit and 3 for rightmost.
         Index 0 can only be used to write a 1 because the screen isn't wide enough
 
@@ -103,6 +109,7 @@ class Unicorn:
                 if image.getpixel((x+image_x_offset, y)) == 255:
                     #print("x",end="")
                     self._unicornhatmini.set_pixel(x+display_x_offset, y+display_y_offset, self._timer_r, self._timer_g, self._timer_b)
+                    res[((y+display_y_offset) * self._display_width) + x+display_x_offset] = True
                 #else:
                 #    print(".",end="")
 
@@ -171,31 +178,35 @@ class Unicorn:
         self.clear_active_timers()
 
         
-    def show_thermo(self, data, threshold_temp, target_temp):
+    def show_thermo(self, data_c, threshold_temp_c, target_temp_c):
         """ data from the thermal camera is 24 high x 32 wide so the input is a list of 768 values.
         Get the value with data[h*32 + w] with h 0-23 and w 0-32
 
         our display is 7 high by 17 wide"""
 
-        print(f"threshold {threshold_temp}, target {target_temp}, ex {data[0]}")
+        print(f"threshold {threshold_temp_c}, target {target_temp_c}, ex {data_c[0]}")
         display_data = [0]*7*17
 
+        stat_cold = 0
+        stat_going = 0
+        stat_done = 0
+            
         for display_row, data_row in enumerate(range(2,24,3)):
             for display_column, data_column in enumerate(range(1, 32, 2)):
-                d = data[data_row*32 + data_column]
+                d = data_c[data_row*32 + data_column]
                 # faint blue if below threshold
                 r = 0
                 g = 0
                 b = 10
-                if d >= threshold_temp and d < target_temp - 50:
-                    intensity_pct = (d - threshold_temp) / (target_temp - threshold_temp)
+                if d >= threshold_temp_c and d < target_temp_c - 30:
+                    intensity_pct = (d - threshold_temp_c) / (target_temp_c - threshold_temp_c)
                     r = 0
                     g = round(intensity_pct * 100)
                     if intensity_pct > .5 and not self._blink_on:
                         g = 0
-                    b = 75
+                    b = 25
 
-                if d >= target_temp - 50 and d < target_temp:
+                if d >= target_temp_c - 30 and d < target_temp_c:
                     if self._blink_on:
                         r = 100
                     else:
@@ -203,20 +214,28 @@ class Unicorn:
                     g = 0
                     b = 0
 
-                if d >= target_temp:
+                if d >= target_temp_c:
                     r = 200
                     g = 0
                     b = 0
                     
-
+                if d <= threshold_temp_c:
+                    stat_cold += 1
+                elif d < target_temp_c:
+                    stat_going += 1
+                elif d >= target_temp_c:
+                    stat_done += 1
+                    
                 self._unicornhatmini.set_pixel(display_column, display_row, r, g, b)
-                
+                print(f"{round(d,1)} ", end="")
+                """
                 if b > 0:
                     print(".",end="")
                 elif g > 0:
                     print("o",end="")
                 elif r > 0:
                     print("X",end="")
+                """
             print()
         print()
         self._unicornhatmini.show()
@@ -225,5 +244,7 @@ class Unicorn:
             self._blink_on = False
         else:
             self._blink_on = True
+
+        return [stat_cold, stat_going, stat_done]
             
         

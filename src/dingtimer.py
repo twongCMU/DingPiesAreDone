@@ -8,6 +8,7 @@ import gevent
 import sys
 import math
 import RPi.GPIO as GPIO
+import socketio
 
 TIMER_NUMBER = 3
 TIMER_MAX_ID = 2
@@ -25,6 +26,9 @@ class DingTimer:
 
         self._unicorn = display
         self._buzzer = buzzer
+
+        self._sio = None
+        self._url = "http://192.168.1.1:5000"
 
     def start_timer(self, seconds: int):
         ret = self.get_free_timer()
@@ -198,16 +202,24 @@ class DingTimer:
         m_print = str(m)
 
         if m == 0:
-            self._unicorn.write_four(s_print)
+            res = self._unicorn.write_four(s_print)
         else:
-            self._unicorn.write_four(m_print + s_print)
+            res = self._unicorn.write_four(m_print + s_print)
+
+        try:
+            self._sio = socketio.Client()
+            self._sio.connect('http://192.168.1.1:5000')
+            self._sio.emit("set_timer", res)
+            self._sio.disconnect()
+        except Exception as e:
+            pass
 
 
     def _one_timer(self, timer_id: int):
         cur_time = time.time()
 
         while cur_time < self._get_timer_end_time(timer_id):
-            print(f"cur timer is {self._current_timer}")
+            #print(f"cur timer is {self._current_timer}")
             if self._current_timer == timer_id:
                 time_left = math.ceil(self._get_timer_end_time(timer_id) - cur_time)
                 self._print_timer(time_left)
@@ -218,7 +230,7 @@ class DingTimer:
                     # Mute the timer
                     self._mute_timer(timer_id)
                     
-            gevent.sleep(.5)
+            gevent.sleep(.75)
             cur_time = time.time()
 
         self._unicorn.write_four("00")

@@ -1,6 +1,11 @@
 #!/usr/bin/python3
 
-from adafruit_apds9960.apds9960 import APDS9960
+#from adafruit_apds9960.apds9960 import APDS9960
+from apds9960.const import *
+from apds9960 import APDS9960
+import RPi.GPIO as GPIO
+import smbus
+
 from buzzer import Buzzer
 from dingtimer import DingTimer as dt
 from knob import Knob
@@ -13,7 +18,7 @@ import board
 import gevent
 import time
 
-
+"""
 APDS9960_DIR_NONE = 0
 APDS9960_DIR_UP = 1
 APDS9960_DIR_DOWN = 2
@@ -24,10 +29,16 @@ APDS9960_DIR_FAR = 6
 
 port = 1
 i2c = board.I2C()
-apds = APDS9960(i2c, rotation=90)
+apds = APDS9960(i2c, rotation=270)
+
 apds.enable_gesture = True
 apds.enable_proximity = True
-apds.gesture_gain = 3 # from the docs: 0=1x, 1=2x, 2=4x, 3=8x 
+#apds.gesture_gain = 3 # from the docs: 0=1x, 1=2x, 2=4x, 3=8x
+"""
+
+port = 1
+bus = smbus.SMBus(port)
+apds = APDS9960(bus)
 
 unicorn = Unicorn()
 buzzer = Buzzer()
@@ -71,13 +82,15 @@ def get_target_time_minutes(knob) -> int:
             unicorn.write_four(str(target_minutes)+"00")
             last_change_val = current_change_val
         time.sleep(.1)
-    print(f"Final: {target_minutes}")
+    print(f"Timer knob Final: {target_minutes}")
     unicorn.write_four(str(target_minutes)+"00")
     knob.reinit()
 
     return target_minutes
 
 try:
+    apds.enableGestureSensor(interrupts=False)
+ 
     while True:
         # don't poll too often so we don't waste power
         gevent.sleep(0.2)
@@ -87,6 +100,7 @@ try:
 
         # check if there is a request for the long timer via knob
         if k.get_changed() != 0:
+            print(f"knob changed")
             mytimer.mute_all()
             target_time_minutes = get_target_time_minutes(k)
             mytimer.start_timer(target_time_minutes*60)
@@ -94,7 +108,10 @@ try:
         # check if there is a request for timer via gesture
         # Warning: for some reason this hangs if there is something in close proximity
         # so when testing make sure there is nothing in front of it
-        motion = apds.gesture()
+        motion = APDS9960_DIR_NONE
+        if apds.isGestureAvailable():
+            motion = apds.readGesture()
+
         if motion != APDS9960_DIR_NONE:
             if motion == APDS9960_DIR_RIGHT:
                 # Add one minute if there is a timer, start a 1 minute timer if not
@@ -108,7 +125,7 @@ try:
                     mytimer.subtract_time(60)
             elif motion == APDS9960_DIR_UP:
                 t.end_thermo()
-            elif motion == APDS9960_DIR_DOWN:
+            elif motion == APDS9960_DIR_:
                 mytimer.cancel_timer()
 
             print("Gesture={}".format(dirs.get(motion, "unknown")))

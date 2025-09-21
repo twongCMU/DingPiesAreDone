@@ -32,6 +32,11 @@ class Knob:
         # flip the direction so clockwise increments
         position = self._encoder.position * -1
 
+        # The encoder sometimes returns 2147483648 when polled
+        if position > 2000000000 or position < -2000000000:
+            print(f"Skipping bad encoder value {position}")
+            return 0
+        
         if position == self._last_position:
             return 0
         
@@ -40,5 +45,13 @@ class Knob:
     def reinit(self):
         """ Reset the counter so the current position is the starting one """
         # flip the direction so clockwise increments
-        self._last_position = self._encoder.position * -1
+        position = self._encoder.position * -1
+
+        # The encoder sometimes returns 2147483648 when polled
+        while position > 2000000000 or position < -2000000000:
+            print(f"Skipping bad encoder value {position}")
+            time.sleep(.1)
+            position = self._encoder.position * -1
+            
+        self._last_position = position
     
