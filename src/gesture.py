@@ -49,7 +49,7 @@ mytimer = dt(unicorn, buzzer)
 k = Knob(0x37)
 
 t = Thermo(unicorn, buzzer)
-    
+
 dirs = {
     APDS9960_DIR_NONE: "none",
     APDS9960_DIR_LEFT: "left",
@@ -98,6 +98,11 @@ try:
         # check if there is a request for the temperature alarm
         t.do_thermo()
 
+        # If the knob is pressed, silence the alarm for timer-end
+        if k.is_button_pressed():
+            unicorn.exit_rainbow()
+            buzzer.exit_play_timer_done()
+            
         # check if there is a request for the long timer via knob
         if k.get_changed() != 0:
             print(f"knob changed")
@@ -125,7 +130,7 @@ try:
                     mytimer.subtract_time(60)
             elif motion == APDS9960_DIR_UP:
                 t.end_thermo()
-            elif motion == APDS9960_DIR_:
+            elif motion == APDS9960_DIR_DOWN:
                 mytimer.cancel_timer()
 
             print("Gesture={}".format(dirs.get(motion, "unknown")))

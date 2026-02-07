@@ -13,6 +13,9 @@ class Buzzer:
         
         self._buzzer = GPIO.PWM(triggerPin, 440)
 
+        # To prematurely exit play_timer_done() if a button is pressed
+        self._do_buzzer = True
+        
     def play(self, freq, duration_sec):
         self._buzzer.start(90)
         self._buzzer.ChangeFrequency(freq)
@@ -37,9 +40,24 @@ class Buzzer:
 
     def play_timer_done(self):
         """We do this in a gevent thread so we can also draw on the screen"""
+
+        # In case we pressed the button without a timer being done, reset this value before we start
+        self._do_buzzer = True
+        
         for i in range(40):
+            if not self._do_buzzer:
+                break
             self.play(261.63, .1)
             gevent.sleep(.001)
         for i in range(40):
+            if not self._do_buzzer:
+                break
             self.play(415.30, .1)
             gevent.sleep(.001)
+
+        # Reset value for next time we call play_timer_done()
+        self._do_buzzer = True
+
+    def exit_play_timer_done(self):
+        self._do_buzzer = False
+            

@@ -40,7 +40,10 @@ class Unicorn:
         self._active_r, self._active_g, self._active_b = [int(c * 255) for c in hsv_to_rgb(hue, 1.0, 1.0)]
 
         self._blink_on = True
-        
+
+        # To prematurely exit show_rainbow() if a button is pressed
+        self._do_rainbow = True
+
     def write_four(self, text):
         """ Writes up to 4 digits. If there are a full 4, the leftmost must be a 1
         since 4 full digits don't fit
@@ -155,8 +158,14 @@ class Unicorn:
         
         # from the unicornhatmini examples
         step = 0
+
+        # In case we pressed the button without an active show_rainbow, reset this value before we start
+        self._do_rainbow = True
         
         for i in range(duration_seconds*60):
+            if not self._do_rainbow:
+                break
+            
             step += 1
 
             for x in range(0, self._display_width):
@@ -174,9 +183,14 @@ class Unicorn:
             gevent.sleep(1.0 / 60)
 
 
+        # Reset value for next time we call show_rainbow()
+        self._do_rainbow = True
+        
         self.clear_numbers()
         self.clear_active_timers()
 
+    def exit_rainbow(self):
+        self._do_rainbow = False
         
     def show_thermo(self, data_c, threshold_temp_c, target_temp_c):
         """ data from the thermal camera is 24 high x 32 wide so the input is a list of 768 values.
