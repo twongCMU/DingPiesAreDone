@@ -15,7 +15,10 @@ from unicorn_mini import Unicorn
 import RPi.GPIO as GPIO
 
 import board
+import eventlet
 import gevent
+import socketio
+import threading
 import time
 
 """
@@ -44,6 +47,43 @@ unicorn = Unicorn()
 buzzer = Buzzer()
 mytimer = dt(unicorn, buzzer)
 
+global pending_timer
+pending_timer = -1
+global silence_alarm
+silence_alarm = False
+
+# A dang server to hecking allow for remote thingies to start timers or silence them
+sio = socketio.Server()
+app = socketio.WSGIApp(sio, static_files={
+        '/': {'content_type': 'text/html', 'filename': 'index.html'}
+    })
+
+@sio.event
+def connect(sid, environ):
+    print(f"Got remote io connection from {sid}")
+
+@sio.event
+def add_new_timer(sid, time_seconds):
+    print(f"Got request to add new timer")
+    global pending_timer
+    pending_timer = time_seconds
+        
+@sio.event
+def silence_alarm(sid):
+    print(f"Got request to silence alarm")
+    global silence_alarm
+    silence_alarm = True
+
+
+def serve_app(sio, app):
+    app = socketio.Middleware(sio, app)
+    eventlet.wsgi.server(eventlet.listen(('192.168.1.213', 5000)), app)
+    
+wst = threading.Thread(target=serve_app, args=(sio,app))
+wst.daemon = True
+wst.start()
+print("Daemon started")
+    
 # for my hardware this is the black knob
 # Used to set timer input. This is separate from the knob for thermo input
 k = Knob(0x37)
@@ -92,6 +132,7 @@ try:
     apds.enableGestureSensor(interrupts=False)
  
     while True:
+        #print("Looping")
         # don't poll too often so we don't waste power
         gevent.sleep(0.2)
 
@@ -99,9 +140,10 @@ try:
         t.do_thermo()
 
         # If the knob is pressed, silence the alarm for timer-end
-        if k.is_button_pressed():
+        if k.is_button_pressed() or silence_alarm:
             unicorn.exit_rainbow()
             buzzer.exit_play_timer_done()
+            silence_alarm = False
             
         # check if there is a request for the long timer via knob
         if k.get_changed() != 0:
@@ -110,6 +152,10 @@ try:
             target_time_minutes = get_target_time_minutes(k)
             mytimer.start_timer(target_time_minutes*60)
 
+        if pending_timer > 0:
+            mytimer.start_timer(pending_timer)
+            pending_timer = -1
+               
         # check if there is a request for timer via gesture
         # Warning: for some reason this hangs if there is something in close proximity
         # so when testing make sure there is nothing in front of it
