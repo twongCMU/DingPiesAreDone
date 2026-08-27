@@ -9,7 +9,7 @@ import smbus
 from buzzer import Buzzer
 from dingtimer import DingTimer as dt
 from knob import Knob
-from thermo import Thermo
+#from thermo import Thermo
 from unicorn_mini import Unicorn
 
 import RPi.GPIO as GPIO
@@ -88,7 +88,7 @@ print("Daemon started")
 # Used to set timer input. This is separate from the knob for thermo input
 k = Knob(0x37)
 
-t = Thermo(unicorn, buzzer)
+#t = Thermo(unicorn, buzzer)
 
 dirs = {
     APDS9960_DIR_NONE: "none",
@@ -132,12 +132,11 @@ try:
     apds.enableGestureSensor(interrupts=False)
  
     while True:
-        #print("Looping")
         # don't poll too often so we don't waste power
         gevent.sleep(0.2)
 
         # check if there is a request for the temperature alarm
-        t.do_thermo()
+        #t.do_thermo()
 
         # If the knob is pressed, silence the alarm for timer-end
         if k.is_button_pressed() or silence_alarm:
@@ -175,11 +174,13 @@ try:
                 if mytimer.active_timer_count() > 0:
                     mytimer.subtract_time(60)
             elif motion == APDS9960_DIR_UP:
-                t.end_thermo()
+                pass
+                #t.end_thermo()
             elif motion == APDS9960_DIR_DOWN:
                 mytimer.cancel_timer()
 
             print("Gesture={}".format(dirs.get(motion, "unknown")))
+
 
 finally:
     GPIO.cleanup()

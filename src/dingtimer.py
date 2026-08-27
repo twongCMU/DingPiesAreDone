@@ -20,7 +20,7 @@ class DingTimer:
         """
         # Each timer is a tuple of muted T/F, the end time, and the gevent handle
         self._timer_list = [(False, 0, None)] * TIMER_NUMBER
-
+        
         # Start with left timer
         self._current_timer = 0 
 
@@ -187,6 +187,13 @@ class DingTimer:
         if closest_id == TIMER_BOGUS_ID:
             print("No timer to show")
             self._unicorn.clear_numbers()
+
+            try:
+                self._sio.disconnect()
+                self._sio.wait()
+            except Exception as e:
+                pass
+            self._sio = None
             return
         
         for i in range(3):
@@ -206,14 +213,17 @@ class DingTimer:
         else:
             res = self._unicorn.write_four(m_print + s_print)
 
+        if self._sio is None:
+            try:
+                self._sio = socketio.Client()
+                self._sio.connect('http://192.168.1.1:5000')
+            except Exception as e:
+                pass
+
         try:
-            self._sio = socketio.Client()
-            self._sio.connect('http://192.168.1.1:5000')
             self._sio.emit("set_timer", res)
-            self._sio.disconnect()
         except Exception as e:
             pass
-
 
     def _one_timer(self, timer_id: int):
         cur_time = time.time()
@@ -229,10 +239,10 @@ class DingTimer:
 
                     # Mute the timer
                     self._mute_timer(timer_id)
-                    
+
             gevent.sleep(.75)
             cur_time = time.time()
-
+        
         self._unicorn.write_four("00")
         
         # This timer is done. Show another timer if needed
