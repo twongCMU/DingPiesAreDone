@@ -77,7 +77,7 @@ def silence_alarm(sid):
 
 def serve_app(sio, app):
     app = socketio.Middleware(sio, app)
-    eventlet.wsgi.server(eventlet.listen(('192.168.1.213', 5000)), app)
+    eventlet.wsgi.server(eventlet.listen(('192.168.1.177', 5000)), app)
     
 wst = threading.Thread(target=serve_app, args=(sio,app))
 wst.daemon = True

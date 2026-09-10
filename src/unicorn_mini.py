@@ -76,7 +76,11 @@ class Unicorn:
         
         # The font we're using leaves the bottom two rows open so we can use it for other
         # things like indicators
-        text_width, text_height = self._font.getsize(text)
+        #text_width, text_height = self._font.getsize(text)
+        #_left, _top, _right, _bottom = self._font.getbbox(text)
+        #text_width, text_height = _right - _left, _bottom - _top
+        text_height = 7 # hard coding this to my LED panel because Pillow is annoying
+        text_width = int(self._font.getlength(text))
         image = Image.new('P', (text_width, text_height), 0)
         draw = ImageDraw.Draw(image)
 
