@@ -121,7 +121,7 @@ class Unicorn:
                 #    print(".",end="")
 
             #print()
-        print()
+        #print()
 
 
     def clear_numbers(self, show = True):
@@ -254,7 +254,7 @@ class Unicorn:
                 elif r > 0:
                     print("X",end="")
                 """
-            print()
+            #print()
         print()
         self._unicornhatmini.show()
         

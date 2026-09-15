@@ -122,8 +122,9 @@ def get_target_time_minutes(knob) -> int:
             unicorn.write_four(str(target_minutes)+"00")
             last_change_val = current_change_val
         time.sleep(.1)
-    print(f"Timer knob Final: {target_minutes}")
-    unicorn.write_four(str(target_minutes)+"00")
+    if target_minutes > 0:
+        print(f"Timer knob Final: {target_minutes}")
+        unicorn.write_four(str(target_minutes)+"00")
     knob.reinit()
 
     return target_minutes
@@ -149,7 +150,10 @@ try:
             print(f"knob changed")
             mytimer.mute_all()
             target_time_minutes = get_target_time_minutes(k)
-            mytimer.start_timer(target_time_minutes*60)
+            if (target_time_minutes > 0):
+                mytimer.start_timer(target_time_minutes*60)
+            else:
+                print(f"Knob error ignored time {target_time_minutes}")
 
         if pending_timer > 0:
             mytimer.start_timer(pending_timer)
